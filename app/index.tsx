@@ -1,161 +1,179 @@
-// app/index.tsx
-import React, { useState } from 'react';
-import { View, TextInput, Image, Text, TouchableOpacity, Alert, ScrollView, StyleSheet } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import * as Location from 'expo-location';
-import * as ImageManipulator from 'expo-image-manipulator';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
-import { submitReport } from '../api';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Alert,
+} from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
+import api from "../src/config/api";
 
 export default function ReportScreen() {
   const router = useRouter();
-  const [image, setImage] = useState<ImageManipulator.ImageResult | null>(null);
-  const [desc, setDesc] = useState('');
-  const [category, setCategory] = useState('Pothole');
-  const [severity, setSeverity] = useState('Low');
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [description, setDescription] = useState("");
   const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
+  const [category, setCategory] = useState("Pothole");
+  const [severity, setSeverity] = useState("Low");
   const [uploading, setUploading] = useState(false);
 
+  // Pick image from camera
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') return Alert.alert('Camera permission required');
+    if (status !== "granted") return Alert.alert("Camera permission required");
 
     const result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      const asset = result.assets[0];
-      const resized = await ImageManipulator.manipulateAsync(
-        asset.uri,
-        [{ resize: { width: 1024 } }],
-        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-      );
-      setImage(resized);
+      setImageUri(result.assets[0].uri);
     }
   };
 
+  // Get current location
   const getLocation = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') return Alert.alert('Location permission required');
+    if (status !== "granted") return Alert.alert("Location permission required");
+
     const loc = await Location.getCurrentPositionAsync({});
     setLocation(loc.coords);
   };
 
+  // Submit report to backend
   const handleSubmit = async () => {
-    if (!image || !location || !desc) return Alert.alert('Please provide photo, description, and location');
-
-    setUploading(true);
-
-    // Persistent userId
-    let userId = await AsyncStorage.getItem('userId');
-    if (!userId) {
-      userId = 'user_' + Date.now();
-      await AsyncStorage.setItem('userId', userId);
+    if (!imageUri || !location || !description) {
+      return Alert.alert("Error", "Please provide photo, description, and location");
     }
 
-    const report = {
-      userId,
-      description: desc,
-      category,
-      severity,
-      lat: location.latitude,
-      lng: location.longitude,
-      imageUri: image.uri,
-    };
+    const token = await AsyncStorage.getItem("token");
+    const userId = await AsyncStorage.getItem("userId");
 
-    await submitReport(report);
+    if (!token || !userId) {
+      return Alert.alert("Error", "Please login first");
+    }
 
-    setUploading(false);
-    Alert.alert('Success', 'Issue submitted!');
-    setDesc('');
-    setImage(null);
-    setLocation(null);
+    try {
+      setUploading(true);
+
+      const formData = new FormData();
+      formData.append("user_id", userId);
+      formData.append("issue_type", category);
+      formData.append("description", description);
+      formData.append("latitude", String(location.latitude));
+      formData.append("longitude", String(location.longitude));
+      formData.append("image", {
+        uri: imageUri,
+        type: "image/jpeg",
+        name: "report.jpg",
+      } as any);
+
+      const res = await api.post("/report", formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      console.log("✅ Report submitted:", res.data);
+      Alert.alert("Success", "Report submitted successfully!");
+
+      setImageUri(null);
+      setDescription("");
+      setLocation(null);
+    } catch (err: any) {
+      console.log("❌ Submit error:", err.response?.data || err.message);
+      Alert.alert("Error", err.response?.data?.message || "Failed to submit report");
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>Citizen Issue Reporting</Text>
+      <Text style={styles.title}>Submit a Report</Text>
 
-      <TouchableOpacity style={styles.photoButton} onPress={takePhoto}>
+      <TouchableOpacity style={styles.button} onPress={takePhoto}>
         <Text style={styles.buttonText}>📸 Take Photo</Text>
       </TouchableOpacity>
-      {image && <Image source={{ uri: image.uri }} style={styles.image} />}
+      {imageUri && <Image source={{ uri: imageUri }} style={styles.image} />}
 
-      <TouchableOpacity style={styles.photoButton} onPress={getLocation}>
+      <TouchableOpacity style={styles.button} onPress={getLocation}>
         <Text style={styles.buttonText}>📍 Get Location</Text>
       </TouchableOpacity>
       {location && (
-        <Text style={styles.locationText}>
+        <Text style={styles.text}>
           Lat: {location.latitude.toFixed(5)}, Lng: {location.longitude.toFixed(5)}
         </Text>
       )}
 
       <TextInput
         placeholder="Describe the issue..."
-        value={desc}
-        onChangeText={setDesc}
         style={styles.input}
+        value={description}
+        onChangeText={setDescription}
         multiline
       />
 
       <Text style={styles.label}>Category:</Text>
-      <View style={styles.optionsContainer}>
-        {['Pothole', 'Streetlight', 'Garbage'].map((cat) => (
+      <View style={styles.options}>
+        {["Pothole", "Streetlight", "Garbage"].map((cat) => (
           <TouchableOpacity
             key={cat}
-            onPress={() => setCategory(cat)}
             style={[styles.optionButton, category === cat && styles.selectedOption]}
+            onPress={() => setCategory(cat)}
           >
-            <Text style={[styles.optionText, category === cat && styles.selectedText]}>{cat}</Text>
+            <Text style={[styles.optionText, category === cat && styles.selectedText]}>
+              {cat}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
 
       <Text style={styles.label}>Severity:</Text>
-      <View style={styles.optionsContainer}>
-        {['Low', 'Medium', 'High'].map((s) => (
+      <View style={styles.options}>
+        {["Low", "Medium", "High"].map((s) => (
           <TouchableOpacity
             key={s}
-            onPress={() => setSeverity(s)}
             style={[styles.optionButton, severity === s && styles.selectedOption]}
+            onPress={() => setSeverity(s)}
           >
-            <Text style={[styles.optionText, severity === s && styles.selectedText]}>{s}</Text>
+            <Text style={[styles.optionText, severity === s && styles.selectedText]}>
+              {s}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={uploading}>
-        <Text style={styles.submitText}>{uploading ? 'Submitting...' : 'Submit Issue'}</Text>
-      </TouchableOpacity>
-
-      {/* Track Reports button */}
-      <TouchableOpacity style={styles.viewButton} onPress={() => router.push('/TrackReports')}>
-        <Text style={styles.viewText}>Track Reports</Text>
-      </TouchableOpacity>
-
-      {/* My Reports button */}
-      <TouchableOpacity style={styles.viewButton} onPress={() => router.push('/MyReports')}>
-        <Text style={styles.viewText}>My Reports</Text>
+      <TouchableOpacity
+        style={[styles.submitButton, uploading && { opacity: 0.7 }]}
+        onPress={handleSubmit}
+        disabled={uploading}
+      >
+        <Text style={styles.submitText}>{uploading ? "Submitting..." : "Submit Report"}</Text>
       </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#f2f6f8' },
-  title: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 20, color: '#2c3e50' },
-  photoButton: { backgroundColor: '#3498db', padding: 12, borderRadius: 10, marginBottom: 10, alignItems: 'center' },
-  buttonText: { color: '#fff', fontWeight: 'bold' },
-  image: { width: '100%', height: 200, borderRadius: 10, marginVertical: 10 },
-  locationText: { textAlign: 'center', marginBottom: 10, color: '#34495e' },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 10, padding: 10, marginBottom: 15, backgroundColor: '#fff', minHeight: 60 },
-  label: { fontWeight: 'bold', marginBottom: 5, color: '#2c3e50' },
-  optionsContainer: { flexDirection: 'row', marginBottom: 15 },
-  optionButton: { borderWidth: 1, borderColor: '#3498db', borderRadius: 20, paddingVertical: 6, paddingHorizontal: 12, marginRight: 10 },
-  selectedOption: { backgroundColor: '#3498db' },
-  optionText: { color: '#3498db' },
-  selectedText: { color: '#fff', fontWeight: 'bold' },
-  submitButton: { backgroundColor: '#27ae60', padding: 15, borderRadius: 10, alignItems: 'center', marginBottom: 10 },
-  submitText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  viewButton: { padding: 12, borderRadius: 10, alignItems: 'center', backgroundColor: '#e67e22', marginBottom: 10 },
-  viewText: { color: '#fff', fontWeight: 'bold' },
+  container: { flex: 1, padding: 20, backgroundColor: "#f2f6f8" },
+  title: { fontSize: 24, fontWeight: "bold", textAlign: "center", marginBottom: 20 },
+  button: { backgroundColor: "#3498db", padding: 12, borderRadius: 10, marginBottom: 10, alignItems: "center" },
+  buttonText: { color: "#fff", fontWeight: "bold" },
+  image: { width: "100%", height: 200, marginVertical: 10, borderRadius: 10 },
+  text: { textAlign: "center", marginBottom: 10, color: "#34495e" },
+  input: { borderWidth: 1, borderColor: "#ccc", padding: 10, marginBottom: 15, borderRadius: 5, backgroundColor: "#fff" },
+  label: { fontWeight: "bold", marginBottom: 5 },
+  options: { flexDirection: "row", marginBottom: 15 },
+  optionButton: { borderWidth: 1, borderColor: "#3498db", borderRadius: 20, paddingVertical: 6, paddingHorizontal: 12, marginRight: 10 },
+  selectedOption: { backgroundColor: "#3498db" },
+  optionText: { color: "#3498db" },
+  selectedText: { color: "#fff", fontWeight: "bold" },
+  submitButton: { backgroundColor: "#27ae60", padding: 15, borderRadius: 10, alignItems: "center" },
+  submitText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
 });

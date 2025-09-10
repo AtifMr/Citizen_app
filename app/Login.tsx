@@ -1,24 +1,43 @@
 import { useState } from "react";
-import { View, TextInput, Button, Text, StyleSheet } from "react-native";
+import { View, TextInput, Button, Text, StyleSheet, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import api from "@/src/config/api";
+import api from "../src/config/api";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const router = useRouter();
 
-const handleLogin = async () => {
-  try {
-    console.log("🔄 Sending login request", email, password);
-    const res = await api.post("/users/login", { email, password });
-    console.log("✅ Response:", res.data);
-  } catch (err: any) {
-    console.log("❌ Login error:", err.response?.data || err.message);
-  }
-};
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert("Error", "Please enter both email and password");
+      return;
+    }
+
+    try {
+      console.log("🔄 Sending login request", email);
+      const res = await api.post("/users/login", { email, password });
+
+      const { token, user } = res.data;
+
+      // Save token, role, and userId
+      await AsyncStorage.setItem("token", token);
+      await AsyncStorage.setItem("role", user.role);
+      await AsyncStorage.setItem("userId", String(user.id));
+
+      console.log("✅ Login success:", user);
+      Alert.alert("Success", `Welcome ${user.name}!`);
+
+      // Redirect based on role
+      if (user.role === "admin") router.replace("/TrackReports");
+      else router.replace("/");
+
+    } catch (err: any) {
+      console.log("❌ Login error:", err.response?.data || err.message);
+      Alert.alert("Login Failed", "Invalid email or password");
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -28,6 +47,8 @@ const handleLogin = async () => {
         style={styles.input}
         value={email}
         onChangeText={setEmail}
+        autoCapitalize="none"
+        keyboardType="email-address"
       />
       <TextInput
         placeholder="Password"
@@ -37,14 +58,12 @@ const handleLogin = async () => {
         onChangeText={setPassword}
       />
       <Button title="Login" onPress={handleLogin} />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 20 },
+  container: { flex: 1, justifyContent: "center", padding: 20, backgroundColor: "#f2f6f8" },
   title: { fontSize: 24, fontWeight: "bold", marginBottom: 20, textAlign: "center" },
-  input: { borderWidth: 1, borderColor: "#ccc", padding: 10, marginBottom: 10, borderRadius: 5 },
-  error: { color: "red", marginTop: 10 },
+  input: { borderWidth: 1, borderColor: "#ccc", padding: 10, marginBottom: 15, borderRadius: 5, backgroundColor: "#fff" },
 });
