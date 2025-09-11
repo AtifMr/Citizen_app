@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList } from "react-native";
+import { View, Text, FlatList, Image } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../src/config/api";
 
@@ -30,6 +30,10 @@ export default function MyReports() {
         keyExtractor={(item: any) => String(item.id)}
         renderItem={({ item }) => (
           <View style={{ marginBottom: 15, padding: 10, borderWidth: 1, borderRadius: 8 }}>
+            <Image
+              source={{ uri: item.image_url }}
+              style={{ width: 100, height: 100, marginBottom: 10 }}
+            />
             <Text>🛠 {item.issue_type}</Text>
             <Text>📄 {item.description}</Text>
             <Text>📍 {item.latitude}, {item.longitude}</Text>

@@ -15,9 +15,12 @@ const handleLogin = async () => {
     if (res.data.user) {
       await AsyncStorage.setItem("userId", String(res.data.user.id));
       await AsyncStorage.setItem("role", res.data.user.role);
-
-      if (res.data.user.role === "admin") router.replace("/TrackReports");
-      else router.replace("/");
+      if (res.data.user.role === "admin") {
+        router.replace("/TrackReports");
+      } else {
+        router.replace("/");
+      }
+      Alert.alert("Success", "Login successful ✅");
     } else {
       Alert.alert("Error", "Invalid credentials");
     }

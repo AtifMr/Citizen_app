@@ -18,7 +18,7 @@ const handleRegister = async () => {
       await AsyncStorage.setItem("userId", String(res.data.user.id));
       await AsyncStorage.setItem("role", res.data.user.role);
       Alert.alert("Success", "Account created ✅");
-      router.replace("/");
+      router.replace("/Login");
     }
   } catch (err: any) {
     Alert.alert("Error", err.response?.data?.message || "Register failed");
