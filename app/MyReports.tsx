@@ -27,11 +27,12 @@ export default function MyReportsScreen() {
 
     try {
       setLoading(true);
-      const res = await api.get("/reports", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get("/reports");
+
       // Filter reports by user_id
-      const userReports = res.data.filter((r: any) => String(r.user_id) === userId);
+      const userReports = res.data.filter(
+        (r: any) => String(r.user_id) === userId
+      );
       setReports(userReports);
     } catch (err: any) {
       console.log("❌ Fetch error:", err.response?.data || err.message);
@@ -56,10 +57,16 @@ export default function MyReportsScreen() {
           keyExtractor={(item) => String(item.id)}
           renderItem={({ item }) => (
             <View style={styles.card}>
-              <Text style={styles.category}>{item.issue_type} — {item.status}</Text>
+              <Text style={styles.category}>
+                {item.issue_type} — {item.status}
+              </Text>
               <Text style={styles.desc}>{item.description}</Text>
-              {item.image_url && <Image source={{ uri: item.image_url }} style={styles.image} />}
-              <Text style={styles.date}>{new Date(item.created_at).toLocaleString()}</Text>
+              {item.image_url && (
+                <Image source={{ uri: item.image_url }} style={styles.image} />
+              )}
+              <Text style={styles.date}>
+                {new Date(item.created_at).toLocaleString()}
+              </Text>
             </View>
           )}
         />
@@ -70,9 +77,25 @@ export default function MyReportsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 15, backgroundColor: "#f2f6f8" },
-  title: { fontSize: 24, fontWeight: "bold", marginBottom: 15, textAlign: "center", color: "#2c3e50" },
-  emptyText: { textAlign: "center", color: "#7f8c8d", fontSize: 16, marginTop: 30 },
-  card: { backgroundColor: "#fff", borderRadius: 10, padding: 12, marginBottom: 12 },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 15,
+    textAlign: "center",
+    color: "#2c3e50",
+  },
+  emptyText: {
+    textAlign: "center",
+    color: "#7f8c8d",
+    fontSize: 16,
+    marginTop: 30,
+  },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+  },
   category: { fontWeight: "bold", color: "#2980b9", marginBottom: 5 },
   desc: { color: "#34495e", marginBottom: 8 },
   image: { width: "100%", height: 150, borderRadius: 10, marginBottom: 8 },

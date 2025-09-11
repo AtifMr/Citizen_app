@@ -59,11 +59,8 @@ export default function TrackReportsScreen() {
     if (!token) return;
 
     try {
-      await api.put(
-        `/report/${reportId}`,
-        { status: newStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.put(`/report/${reportId}`, { status: newStatus });
+      console.log(`✅ Report ${reportId} status updated to ${newStatus}`);
       // Update local state
       setReports((prev) =>
         prev.map((r) => (r.id === reportId ? { ...r, status: newStatus } : r))

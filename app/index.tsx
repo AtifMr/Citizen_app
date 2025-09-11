@@ -19,7 +19,8 @@ export default function ReportScreen() {
   const router = useRouter();
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [description, setDescription] = useState("");
-  const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
+  const [location, setLocation] =
+    useState<Location.LocationObjectCoords | null>(null);
   const [category, setCategory] = useState("Pothole");
   const [severity, setSeverity] = useState("Low");
   const [uploading, setUploading] = useState(false);
@@ -38,7 +39,8 @@ export default function ReportScreen() {
   // Get current location
   const getLocation = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") return Alert.alert("Location permission required");
+    if (status !== "granted")
+      return Alert.alert("Location permission required");
 
     const loc = await Location.getCurrentPositionAsync({});
     setLocation(loc.coords);
@@ -47,7 +49,10 @@ export default function ReportScreen() {
   // Submit report to backend
   const handleSubmit = async () => {
     if (!imageUri || !location || !description) {
-      return Alert.alert("Error", "Please provide photo, description, and location");
+      return Alert.alert(
+        "Error",
+        "Please provide photo, description, and location"
+      );
     }
 
     const token = await AsyncStorage.getItem("token");
@@ -71,10 +76,15 @@ export default function ReportScreen() {
         type: "image/jpeg",
         name: "report.jpg",
       } as any);
-
+      console.log("🔄 Submitting report", {
+        category,
+        severity,
+        description,
+        location,
+      });
       const res = await api.post("/report", formData, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token}`, // ✅ Add this
           "Content-Type": "multipart/form-data",
         },
       });
@@ -86,8 +96,12 @@ export default function ReportScreen() {
       setDescription("");
       setLocation(null);
     } catch (err: any) {
+      console.log("Submit Error");
       console.log("❌ Submit error:", err.response?.data || err.message);
-      Alert.alert("Error", err.response?.data?.message || "Failed to submit report");
+      Alert.alert(
+        "Error",
+        err.response?.data?.message || "Failed to submit report"
+      );
     } finally {
       setUploading(false);
     }
@@ -107,7 +121,8 @@ export default function ReportScreen() {
       </TouchableOpacity>
       {location && (
         <Text style={styles.text}>
-          Lat: {location.latitude.toFixed(5)}, Lng: {location.longitude.toFixed(5)}
+          Lat: {location.latitude.toFixed(5)}, Lng:{" "}
+          {location.longitude.toFixed(5)}
         </Text>
       )}
 
@@ -124,10 +139,18 @@ export default function ReportScreen() {
         {["Pothole", "Streetlight", "Garbage"].map((cat) => (
           <TouchableOpacity
             key={cat}
-            style={[styles.optionButton, category === cat && styles.selectedOption]}
+            style={[
+              styles.optionButton,
+              category === cat && styles.selectedOption,
+            ]}
             onPress={() => setCategory(cat)}
           >
-            <Text style={[styles.optionText, category === cat && styles.selectedText]}>
+            <Text
+              style={[
+                styles.optionText,
+                category === cat && styles.selectedText,
+              ]}
+            >
               {cat}
             </Text>
           </TouchableOpacity>
@@ -139,10 +162,15 @@ export default function ReportScreen() {
         {["Low", "Medium", "High"].map((s) => (
           <TouchableOpacity
             key={s}
-            style={[styles.optionButton, severity === s && styles.selectedOption]}
+            style={[
+              styles.optionButton,
+              severity === s && styles.selectedOption,
+            ]}
             onPress={() => setSeverity(s)}
           >
-            <Text style={[styles.optionText, severity === s && styles.selectedText]}>
+            <Text
+              style={[styles.optionText, severity === s && styles.selectedText]}
+            >
               {s}
             </Text>
           </TouchableOpacity>
@@ -154,7 +182,9 @@ export default function ReportScreen() {
         onPress={handleSubmit}
         disabled={uploading}
       >
-        <Text style={styles.submitText}>{uploading ? "Submitting..." : "Submit Report"}</Text>
+        <Text style={styles.submitText}>
+          {uploading ? "Submitting..." : "Submit Report"}
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -162,18 +192,48 @@ export default function ReportScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: "#f2f6f8" },
-  title: { fontSize: 24, fontWeight: "bold", textAlign: "center", marginBottom: 20 },
-  button: { backgroundColor: "#3498db", padding: 12, borderRadius: 10, marginBottom: 10, alignItems: "center" },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  button: {
+    backgroundColor: "#3498db",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 10,
+    alignItems: "center",
+  },
   buttonText: { color: "#fff", fontWeight: "bold" },
   image: { width: "100%", height: 200, marginVertical: 10, borderRadius: 10 },
   text: { textAlign: "center", marginBottom: 10, color: "#34495e" },
-  input: { borderWidth: 1, borderColor: "#ccc", padding: 10, marginBottom: 15, borderRadius: 5, backgroundColor: "#fff" },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    padding: 10,
+    marginBottom: 15,
+    borderRadius: 5,
+    backgroundColor: "#fff",
+  },
   label: { fontWeight: "bold", marginBottom: 5 },
   options: { flexDirection: "row", marginBottom: 15 },
-  optionButton: { borderWidth: 1, borderColor: "#3498db", borderRadius: 20, paddingVertical: 6, paddingHorizontal: 12, marginRight: 10 },
+  optionButton: {
+    borderWidth: 1,
+    borderColor: "#3498db",
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginRight: 10,
+  },
   selectedOption: { backgroundColor: "#3498db" },
   optionText: { color: "#3498db" },
   selectedText: { color: "#fff", fontWeight: "bold" },
-  submitButton: { backgroundColor: "#27ae60", padding: 15, borderRadius: 10, alignItems: "center" },
+  submitButton: {
+    backgroundColor: "#27ae60",
+    padding: 15,
+    borderRadius: 10,
+    alignItems: "center",
+  },
   submitText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
 });
