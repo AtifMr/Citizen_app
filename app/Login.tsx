@@ -9,61 +9,23 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const router = useRouter();
 
-//   const handleLogin = async () => {
-//     if (!email || !password) {
-//       Alert.alert("Error", "Please enter both email and password");
-//       return;
-//     }
-
-//     try {
-//       console.log("🔄 Sending login request", email);
-//       const res = await api.post("/users/login", { email, password });
-
-//       const { token, user } = res.data;
-
-//       // Save token, role, and userId
-//       await AsyncStorage.setItem("token", token);
-//       await AsyncStorage.setItem("role", user.role);
-//       await AsyncStorage.setItem("userId", String(user.id));
-
-//       console.log("✅ Login success:", user);
-//       Alert.alert("Success", `Welcome ${user.name}!`);
-
-//       // Redirect based on role
-//       if (user.role === "admin") router.replace("/TrackReports");
-//       else router.replace("/");
-
-//     } catch (err: any) {
-//       console.log("❌ Login error:", err.response?.data || err.message);
-//       Alert.alert("Login Failed", "Invalid email or password");
-//     }
-//   };
-
 const handleLogin = async () => {
   try {
-    console.log("🔄 Sending login request", email, password);
     const res = await api.post("/users/login", { email, password });
-
-    if (res.data.token) {
-      await AsyncStorage.clear(); // clear old tokens before saving new one
-      await AsyncStorage.setItem("token", res.data.token);
-      await AsyncStorage.setItem("role", res.data.user.role);
+    if (res.data.user) {
       await AsyncStorage.setItem("userId", String(res.data.user.id));
+      await AsyncStorage.setItem("role", res.data.user.role);
 
-
-      console.log("✅ Login success, token received:", res.data.token);
-      Alert.alert("Success", `Welcome ${res.data.user.name}!`);
-      const stored = await AsyncStorage.getItem("token");
-      console.log("🔎 Confirming stored token:", stored);
+      if (res.data.user.role === "admin") router.replace("/TrackReports");
+      else router.replace("/");
     } else {
-      console.log("⚠️ No token returned from server");
+      Alert.alert("Error", "Invalid credentials");
     }
-    if (res.data.user.role === "admin") router.replace("/TrackReports");
-    else router.replace("/");
   } catch (err: any) {
-    console.log("❌ Login error:", err.response?.data || err.message);
+    Alert.alert("Error", err.response?.data?.message || "Login failed");
   }
 };
+
 
 
   return (

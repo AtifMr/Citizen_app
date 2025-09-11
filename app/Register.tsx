@@ -11,37 +11,20 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const router = useRouter();
 
-  const handleRegister = async () => {
-    if (!name || !email || !password || !confirmPassword) {
-      Alert.alert("Error", "Please fill in all fields");
-      return;
-    }
-    if (password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match");
-      return;
-    }
-
-    try {
-      console.log("🔄 Sending register request", email);
-      const res = await api.post("/users/register", { name, email, password });
-
-      const { token, user } = res.data;
-
-      // Save token, role, and userId
-      await AsyncStorage.setItem("token", token);
-      await AsyncStorage.setItem("role", user.role);
-      await AsyncStorage.setItem("userId", String(user.id));
-
-      console.log("✅ Registration success:", user);
-      Alert.alert("Success", `Welcome ${user.name}!`);
-
+const handleRegister = async () => {
+  try {
+    const res = await api.post("/users/register", { name, email, password });
+    if (res.data.user) {
+      await AsyncStorage.setItem("userId", String(res.data.user.id));
+      await AsyncStorage.setItem("role", res.data.user.role);
+      Alert.alert("Success", "Account created ✅");
       router.replace("/");
-
-    } catch (err: any) {
-      console.log("❌ Register error:", err.response?.data || err.message);
-      Alert.alert("Registration Failed", "Unable to register user");
     }
-  };
+  } catch (err: any) {
+    Alert.alert("Error", err.response?.data?.message || "Register failed");
+  }
+};
+
 
   return (
     <View style={styles.container}>

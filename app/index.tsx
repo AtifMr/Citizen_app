@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   Alert,
+  Button,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
@@ -47,65 +48,38 @@ export default function ReportScreen() {
   };
 
   // Submit report to backend
-  const handleSubmit = async () => {
-    if (!imageUri || !location || !description) {
-      return Alert.alert(
-        "Error",
-        "Please provide photo, description, and location"
-      );
-    }
+const handleSubmit = async () => {
+  const userId = await AsyncStorage.getItem("userId");
 
-    const token = await AsyncStorage.getItem("token");
-    const userId = await AsyncStorage.getItem("userId");
+  if (!imageUri || !location || !description || !userId) {
+    return Alert.alert("Error", "Please provide all details and login first");
+  }
 
-    if (!token || !userId) {
-      return Alert.alert("Error", "Please login first");
-    }
+  try {
+    const formData = new FormData();
+    formData.append("user_id", userId);
+    formData.append("issue_type", category);
+    formData.append("description", description);
+    formData.append("latitude", String(location.latitude));
+    formData.append("longitude", String(location.longitude));
+    formData.append("image", {
+      uri: imageUri,
+      type: "image/jpeg",
+      name: "report.jpg",
+    } as any);
 
-    try {
-      setUploading(true);
+    const res = await api.post("/report", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
 
-      const formData = new FormData();
-      formData.append("user_id", userId);
-      formData.append("issue_type", category);
-      formData.append("description", description);
-      formData.append("latitude", String(location.latitude));
-      formData.append("longitude", String(location.longitude));
-      formData.append("image", {
-        uri: imageUri,
-        type: "image/jpeg",
-        name: "report.jpg",
-      } as any);
-      console.log("🔄 Submitting report", {
-        category,
-        severity,
-        description,
-        location,
-      });
-      const res = await api.post("/report", formData, {
-        headers: {
-          Authorization: `Bearer ${token}`, // ✅ Add this
-          "Content-Type": "multipart/form-data",
-        },
-      });
+    console.log("✅ Report submitted:", res.data);
+    Alert.alert("Success", "Report submitted successfully!");
+  } catch (err: any) {
+    console.log("❌ Submit error:", err.response?.data || err.message);
+    Alert.alert("Error", "Failed to submit report");
+  }
+};
 
-      console.log("✅ Report submitted:", res.data);
-      Alert.alert("Success", "Report submitted successfully!");
-
-      setImageUri(null);
-      setDescription("");
-      setLocation(null);
-    } catch (err: any) {
-      console.log("Submit Error");
-      console.log("❌ Submit error:", err.response?.data || err.message);
-      Alert.alert(
-        "Error",
-        err.response?.data?.message || "Failed to submit report"
-      );
-    } finally {
-      setUploading(false);
-    }
-  };
 
   return (
     <ScrollView style={styles.container}>
@@ -176,7 +150,6 @@ export default function ReportScreen() {
           </TouchableOpacity>
         ))}
       </View>
-
       <TouchableOpacity
         style={[styles.submitButton, uploading && { opacity: 0.7 }]}
         onPress={handleSubmit}
@@ -188,6 +161,7 @@ export default function ReportScreen() {
       </TouchableOpacity>
     </ScrollView>
   );
+  
 }
 
 const styles = StyleSheet.create({

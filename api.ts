@@ -1,14 +1,7 @@
-// // api.js
-// let mockReports = [];
+import axios from "axios";
 
-// export async function submitReport(report) {
-//   report.id = mockReports.length + 1;
-//   report.status = 'Submitted';
-//   report.created_at = new Date().toISOString();
-//   mockReports.push(report);
-//   return report;
-// }
+const api = axios.create({
+  baseURL: "http://192.168.29.76:5000", // ⚠️ Replace YOUR_IP with your machine IP
+});
 
-// export async function getUserReports(userId) {
-//   return mockReports.filter(r => r.userId === userId);
-// }
+export default api;
